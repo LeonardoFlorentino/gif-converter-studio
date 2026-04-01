@@ -7,6 +7,10 @@
     "start": "electron ."
   },
   "license": "MIT",
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.3"
+  },
   "devDependencies": {
     "electron": "^31.2.1"
   }

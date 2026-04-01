@@ -1,3 +1,6 @@
-const { contextBridge } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("gifStudio", {});
+contextBridge.exposeInMainWorld("gifStudio", {
+	pickOutput: () => ipcRenderer.invoke("pick-output"),
+	convertVideo: (payload) => ipcRenderer.invoke("convert-video", payload)
+});
