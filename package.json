@@ -1,0 +1,13 @@
+{
+  "name": "gif-converter-studio",
+  "version": "1.0.0",
+  "description": "Desktop app to convert MP4 videos to GIFs",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.2.1"
+  }
+}
