@@ -16,22 +16,33 @@ npm install
 npm start
 ```
 
+## Gerar executavel Windows (.exe)
+
+```bash
+npm run build:win
+```
+
+Saida em `dist/` com instalador NSIS em modo one-click.
+
 ## Como usar
 
-1. Arraste um arquivo `.mp4` para a area principal (ou clique para selecionar).
+1. Arraste um ou varios arquivos `.mp4` para a area principal (ou clique para selecionar).
 2. Selecione a pasta de destino (por exemplo, `public/demos` do seu projeto).
-3. Ajuste FPS, largura e duracao maxima.
-4. Clique em **Converter para GIF**.
+3. Escolha o preset:
+	- `Custom`: usa os valores atuais dos campos.
+	- `README GitHub (leve)`: aplica automaticamente `fps=10`, `width=480`, `duration=8`.
+4. Ajuste FPS, largura e duracao maxima se necessario.
+5. Clique em **Converter lote para GIF**.
 
 ## Observacoes
 
-- Formato de entrada suportado no MVP: `.mp4`
+- Formato de entrada suportado: `.mp4`
 - O GIF final usa pipeline de paleta (`palettegen/paletteuse`) para qualidade melhor.
+- Conversao em lote processa os videos em sequencia.
 - Voce pode escolher manter ou remover o MP4 original apos a conversao.
 
 ## Proximos passos recomendados
 
 - Adicionar botao para abrir automaticamente a pasta `public` de um projeto.
-- Suportar lote (multiplos videos de uma vez).
-- Gerar binario instalavel com `electron-builder`.
-- Criar preset "GitHub README" com tamanho e FPS ideais para docs.
+- Adicionar fila com progresso individual por arquivo.
+- Permitir presets personalizados salvos localmente.
