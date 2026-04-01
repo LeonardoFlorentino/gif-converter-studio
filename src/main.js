@@ -6,6 +6,64 @@ const ffmpegPath = require("ffmpeg-static");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+async function convertOneVideo(inputPath, outputDir, options = {}) {
+  const {
+    fps = 12,
+    width = 640,
+    maxDuration = 10,
+    keepOriginal = true
+  } = options;
+
+  if (!inputPath || !outputDir) {
+    throw new Error("Arquivo de entrada e pasta de destino sao obrigatorios.");
+  }
+
+  if (!fs.existsSync(inputPath)) {
+    throw new Error("Arquivo de video nao encontrado.");
+  }
+
+  if (!fs.existsSync(outputDir)) {
+    throw new Error("Pasta de destino nao encontrada.");
+  }
+
+  const ext = path.extname(inputPath).toLowerCase();
+  if (ext !== ".mp4") {
+    throw new Error("Somente arquivos .mp4 sao suportados neste momento.");
+  }
+
+  const baseName = path.basename(inputPath, ext);
+  const outputPath = path.join(outputDir, `${baseName}.gif`);
+
+  const safeFps = Number.isFinite(Number(fps)) ? Number(fps) : 12;
+  const safeWidth = Number.isFinite(Number(width)) ? Number(width) : 640;
+  const safeDuration = Number.isFinite(Number(maxDuration)) ? Number(maxDuration) : 10;
+
+  const filterGraph = [
+    `[0:v]fps=${safeFps},scale=${safeWidth}:-1:flags=lanczos,split[a][b]`,
+    `[a]palettegen=stats_mode=full[p]`,
+    `[b][p]paletteuse=dither=sierra2_4a`
+  ];
+
+  await new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions(["-t", `${safeDuration}`])
+      .complexFilter(filterGraph)
+      .on("end", resolve)
+      .on("error", reject)
+      .save(outputPath);
+  });
+
+  if (!keepOriginal) {
+    fs.unlinkSync(inputPath);
+  }
+
+  return {
+    inputPath,
+    outputPath,
+    removedOriginal: !keepOriginal
+  };
+}
+
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 980,
@@ -53,8 +111,13 @@ ipcMain.handle("pick-output", async () => {
 });
 
 ipcMain.handle("convert-video", async (_event, payload) => {
+  const { inputPath, outputDir, fps, width, maxDuration, keepOriginal } = payload;
+  return convertOneVideo(inputPath, outputDir, { fps, width, maxDuration, keepOriginal });
+});
+
+ipcMain.handle("convert-videos", async (_event, payload) => {
   const {
-    inputPath,
+    inputPaths,
     outputDir,
     fps = 12,
     width = 640,
@@ -62,51 +125,23 @@ ipcMain.handle("convert-video", async (_event, payload) => {
     keepOriginal = true
   } = payload;
 
-  if (!inputPath || !outputDir) {
-    throw new Error("Arquivo de entrada e pasta de destino sao obrigatorios.");
+  if (!Array.isArray(inputPaths) || inputPaths.length === 0) {
+    throw new Error("Selecione ao menos um video .mp4 para conversao em lote.");
   }
 
-  if (!fs.existsSync(inputPath)) {
-    throw new Error("Arquivo de video nao encontrado.");
-  }
-
-  if (!fs.existsSync(outputDir)) {
-    throw new Error("Pasta de destino nao encontrada.");
-  }
-
-  const ext = path.extname(inputPath).toLowerCase();
-  if (ext !== ".mp4") {
-    throw new Error("Somente arquivos .mp4 sao suportados neste momento.");
-  }
-
-  const baseName = path.basename(inputPath, ext);
-  const outputPath = path.join(outputDir, `${baseName}.gif`);
-
-  const safeFps = Number.isFinite(Number(fps)) ? Number(fps) : 12;
-  const safeWidth = Number.isFinite(Number(width)) ? Number(width) : 640;
-  const safeDuration = Number.isFinite(Number(maxDuration)) ? Number(maxDuration) : 10;
-
-  const filterGraph = [
-    `[0:v]fps=${safeFps},scale=${safeWidth}:-1:flags=lanczos,split[a][b]`,
-    `[a]palettegen=stats_mode=full[p]`,
-    `[b][p]paletteuse=dither=sierra2_4a`
-  ];
-
-  await new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .outputOptions(["-t", `${safeDuration}`])
-      .complexFilter(filterGraph)
-      .on("end", resolve)
-      .on("error", reject)
-      .save(outputPath);
-  });
-
-  if (!keepOriginal) {
-    fs.unlinkSync(inputPath);
+  const results = [];
+  for (const inputPath of inputPaths) {
+    const result = await convertOneVideo(inputPath, outputDir, {
+      fps,
+      width,
+      maxDuration,
+      keepOriginal
+    });
+    results.push(result);
   }
 
   return {
-    outputPath,
-    removedOriginal: !keepOriginal
+    count: results.length,
+    results
   };
 });
