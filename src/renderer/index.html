@@ -23,20 +23,28 @@
       </header>
 
       <section id="drop-zone" class="drop-zone">
-        <p class="drop-title">Solte seu video MP4 aqui</p>
-        <p class="drop-subtitle">ou clique e escolha um arquivo</p>
-        <input id="file-input" type="file" accept=".mp4" hidden />
+        <p class="drop-title">Solte seus videos MP4 aqui</p>
+        <p class="drop-subtitle">ou clique e escolha um ou varios arquivos</p>
+        <input id="file-input" type="file" accept=".mp4" multiple hidden />
       </section>
 
       <section class="panel">
         <div class="row">
-          <label>Arquivo</label>
+          <label>Arquivos selecionados</label>
           <p id="selected-file">Nenhum arquivo selecionado</p>
         </div>
         <div class="row row-inline">
           <label for="output-dir">Destino</label>
           <input id="output-dir" type="text" placeholder="Escolha a pasta de saida" readonly />
           <button id="choose-output" class="btn ghost">Selecionar pasta</button>
+        </div>
+        <div class="row row-inline">
+          <label for="preset">Preset</label>
+          <select id="preset">
+            <option value="custom">Custom</option>
+            <option value="github-readme">README GitHub (leve)</option>
+          </select>
+          <span class="preset-note">Preset ajusta FPS, largura e duracao.</span>
         </div>
         <div class="grid">
           <label>
@@ -58,7 +66,7 @@
         </label>
 
         <div class="actions">
-          <button id="convert" class="btn primary">Converter para GIF</button>
+          <button id="convert" class="btn primary">Converter lote para GIF</button>
         </div>
 
         <p id="status" class="status idle">Aguardando arquivo...</p>

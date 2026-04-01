@@ -4,22 +4,31 @@ const selectedFileLabel = document.getElementById("selected-file");
 const outputDirInput = document.getElementById("output-dir");
 const chooseOutputButton = document.getElementById("choose-output");
 const convertButton = document.getElementById("convert");
+const presetInput = document.getElementById("preset");
 const fpsInput = document.getElementById("fps");
 const widthInput = document.getElementById("width");
 const durationInput = document.getElementById("duration");
 const keepOriginalInput = document.getElementById("keep-original");
 const statusEl = document.getElementById("status");
 
-let selectedPath = "";
+let selectedPaths = [];
 
 function setStatus(message, type) {
 	statusEl.textContent = message;
 	statusEl.className = `status ${type}`;
 }
 
-function setSelectedFile(filePath) {
-	selectedPath = filePath;
-	selectedFileLabel.textContent = filePath || "Nenhum arquivo selecionado";
+function setSelectedFiles(filePaths) {
+	selectedPaths = filePaths;
+
+	if (!filePaths || filePaths.length === 0) {
+		selectedFileLabel.textContent = "Nenhum arquivo selecionado";
+		return;
+	}
+
+	const preview = filePaths.slice(0, 3).join(" | ");
+	const remaining = filePaths.length > 3 ? ` +${filePaths.length - 3} arquivo(s)` : "";
+	selectedFileLabel.textContent = `${filePaths.length} arquivo(s): ${preview}${remaining}`;
 }
 
 function pickFromInput() {
@@ -27,9 +36,21 @@ function pickFromInput() {
 		return;
 	}
 
-	const file = fileInput.files[0];
-	setSelectedFile(file.path);
+	const paths = Array.from(fileInput.files)
+		.map((file) => file.path)
+		.filter((filePath) => filePath.toLowerCase().endsWith(".mp4"));
+
+	setSelectedFiles(paths);
 	setStatus("Video carregado. Escolha o destino e converta.", "idle");
+}
+
+function applyPreset() {
+	if (presetInput.value === "github-readme") {
+		fpsInput.value = "10";
+		widthInput.value = "480";
+		durationInput.value = "8";
+		setStatus("Preset README GitHub aplicado.", "idle");
+	}
 }
 
 function setDragState(isDragging) {
@@ -62,15 +83,20 @@ dropZone.addEventListener("drop", (event) => {
 		return;
 	}
 
-	const file = files[0];
-	if (!file.path.toLowerCase().endsWith(".mp4")) {
+	const paths = Array.from(files)
+		.map((file) => file.path)
+		.filter((filePath) => filePath.toLowerCase().endsWith(".mp4"));
+
+	if (paths.length === 0) {
 		setStatus("Arraste apenas arquivos .mp4", "error");
 		return;
 	}
 
-	setSelectedFile(file.path);
+	setSelectedFiles(paths);
 	setStatus("Video carregado. Escolha o destino e converta.", "idle");
 });
+
+presetInput.addEventListener("change", applyPreset);
 
 chooseOutputButton.addEventListener("click", async () => {
 	const chosen = await window.gifStudio.pickOutput?.();
@@ -82,8 +108,8 @@ chooseOutputButton.addEventListener("click", async () => {
 });
 
 convertButton.addEventListener("click", async () => {
-	if (!selectedPath) {
-		setStatus("Selecione um arquivo MP4 primeiro.", "error");
+	if (!selectedPaths.length) {
+		setStatus("Selecione ao menos um arquivo MP4 primeiro.", "error");
 		return;
 	}
 
@@ -96,17 +122,30 @@ convertButton.addEventListener("click", async () => {
 		convertButton.disabled = true;
 		setStatus("Convertendo... isso pode levar alguns segundos.", "working");
 
-		const result = await window.gifStudio.convertVideo({
-			inputPath: selectedPath,
-			outputDir: outputDirInput.value.trim(),
-			fps: Number(fpsInput.value),
-			width: Number(widthInput.value),
-			maxDuration: Number(durationInput.value),
-			keepOriginal: keepOriginalInput.checked
-		});
+		if (selectedPaths.length > 1) {
+			const batchResult = await window.gifStudio.convertVideos({
+				inputPaths: selectedPaths,
+				outputDir: outputDirInput.value.trim(),
+				fps: Number(fpsInput.value),
+				width: Number(widthInput.value),
+				maxDuration: Number(durationInput.value),
+				keepOriginal: keepOriginalInput.checked
+			});
 
-		const removed = result.removedOriginal ? " MP4 removido." : "";
-		setStatus(`GIF criado em: ${result.outputPath}.${removed}`, "success");
+			setStatus(`Conversao concluida: ${batchResult.count} GIF(s) gerados.`, "success");
+		} else {
+			const result = await window.gifStudio.convertVideo({
+				inputPath: selectedPaths[0],
+				outputDir: outputDirInput.value.trim(),
+				fps: Number(fpsInput.value),
+				width: Number(widthInput.value),
+				maxDuration: Number(durationInput.value),
+				keepOriginal: keepOriginalInput.checked
+			});
+
+			const removed = result.removedOriginal ? " MP4 removido." : "";
+			setStatus(`GIF criado em: ${result.outputPath}.${removed}`, "success");
+		}
 	} catch (error) {
 		setStatus(`Erro: ${error.message || "Falha na conversao."}`, "error");
 	} finally {
