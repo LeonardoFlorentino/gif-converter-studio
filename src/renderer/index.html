@@ -4,13 +4,67 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GIF Converter Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app-shell">
-      <h1>GIF Converter Studio</h1>
-      <p>Base UI pronta. Proximos commits vao adicionar funcionalidades.</p>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Desktop Tool</p>
+          <h1>GIF Converter Studio</h1>
+        </div>
+        <p class="hint">Arraste um .mp4, ajuste e converta para usar no seu public.</p>
+      </header>
+
+      <section id="drop-zone" class="drop-zone">
+        <p class="drop-title">Solte seu video MP4 aqui</p>
+        <p class="drop-subtitle">ou clique e escolha um arquivo</p>
+        <input id="file-input" type="file" accept=".mp4" hidden />
+      </section>
+
+      <section class="panel">
+        <div class="row">
+          <label>Arquivo</label>
+          <p id="selected-file">Nenhum arquivo selecionado</p>
+        </div>
+        <div class="row row-inline">
+          <label for="output-dir">Destino</label>
+          <input id="output-dir" type="text" placeholder="Escolha a pasta de saida" readonly />
+          <button id="choose-output" class="btn ghost">Selecionar pasta</button>
+        </div>
+        <div class="grid">
+          <label>
+            FPS
+            <input id="fps" type="number" min="5" max="30" value="12" />
+          </label>
+          <label>
+            Largura (px)
+            <input id="width" type="number" min="240" max="1920" value="640" />
+          </label>
+          <label>
+            Duracao maxima (s)
+            <input id="duration" type="number" min="1" max="60" value="10" />
+          </label>
+        </div>
+        <label class="check-row">
+          <input id="keep-original" type="checkbox" checked />
+          Manter arquivo .mp4 original
+        </label>
+
+        <div class="actions">
+          <button id="convert" class="btn primary">Converter para GIF</button>
+        </div>
+
+        <p id="status" class="status idle">Aguardando arquivo...</p>
+      </section>
     </main>
+
     <script src="./renderer.js"></script>
   </body>
 </html>
