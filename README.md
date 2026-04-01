@@ -35,3 +35,7 @@ npm start
 - Suportar lote (multiplos videos de uma vez).
 - Gerar binario instalavel com `electron-builder`.
 - Criar preset "GitHub README" com tamanho e FPS ideais para docs.
+
+## Branch Protection Setup Note
+
+Use a test pull request to make the `CI / validate` status check available in branch protection rules.
