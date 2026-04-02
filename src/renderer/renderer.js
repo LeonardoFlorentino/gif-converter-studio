@@ -10,6 +10,7 @@ const fpsInput = document.getElementById("fps");
 const widthInput = document.getElementById("width");
 const durationInput = document.getElementById("duration");
 const keepOriginalInput = document.getElementById("keep-original");
+const qualityInput = document.getElementById("quality");
 const statusEl = document.getElementById("status");
 
 const THEME_STORAGE_KEY = "gif-studio-theme";
@@ -77,6 +78,7 @@ function applyPreset() {
     fpsInput.value = "10";
     widthInput.value = "480";
     durationInput.value = "8";
+    qualityInput.value = "medium";
     setStatus("Preset README GitHub aplicado.", "idle");
   }
 }
@@ -89,11 +91,19 @@ function setDragState(isDragging) {
   }
 }
 
+function syncWidthField() {
+  const isOriginal = qualityInput.value === "high";
+  widthInput.disabled = isOriginal;
+  widthInput.placeholder = isOriginal ? "Original" : "640";
+}
+
 applyTheme(getPreferredTheme());
+syncWidthField();
 
 dropZone.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", pickFromInput);
 themeToggleButton.addEventListener("click", toggleTheme);
+qualityInput.addEventListener("change", syncWidthField);
 
 dropZone.addEventListener("dragover", (event) => {
   event.preventDefault();
@@ -161,6 +171,7 @@ convertButton.addEventListener("click", async () => {
         width: Number(widthInput.value),
         maxDuration: Number(durationInput.value),
         keepOriginal: keepOriginalInput.checked,
+        quality: qualityInput.value,
       });
 
       setStatus(
@@ -175,6 +186,7 @@ convertButton.addEventListener("click", async () => {
         width: Number(widthInput.value),
         maxDuration: Number(durationInput.value),
         keepOriginal: keepOriginalInput.checked,
+        quality: qualityInput.value,
       });
 
       const removed = result.removedOriginal ? " MP4 removido." : "";

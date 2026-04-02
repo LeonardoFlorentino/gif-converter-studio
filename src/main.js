@@ -1,17 +1,62 @@
 const path = require("node:path");
 const fs = require("node:fs");
+const { execFile } = require("node:child_process");
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+/**
+ * Runs ffmpeg cropdetect and returns the most stable "W:H:X:Y" string,
+ * or null when no significant black border is found.
+ */
+async function detectCrop(inputPath) {
+  return new Promise((resolve) => {
+    execFile(
+      ffmpegPath,
+      [
+        "-i",
+        inputPath,
+        "-vf",
+        "cropdetect=limit=24:round=2:reset=0",
+        "-f",
+        "null",
+        "-",
+      ],
+      { timeout: 30_000 },
+      (_err, _stdout, stderr) => {
+        const matches = [...stderr.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
+        if (matches.length === 0) {
+          resolve(null);
+          return;
+        }
+        // Tally occurrences and pick the most frequent crop value (most stable)
+        const tally = {};
+        for (const m of matches) {
+          const key = `${m[1]}:${m[2]}:${m[3]}:${m[4]}`;
+          tally[key] = (tally[key] ?? 0) + 1;
+        }
+        const best = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
+        resolve(best);
+      },
+    );
+  });
+}
+
+const QUALITY_PRESETS = {
+  high: { maxColors: 256, dither: "sierra2_4a", scaleWidth: "iw" },
+  medium: { maxColors: 128, dither: "floyd_steinberg", scaleWidth: null },
+  low: { maxColors: 64, dither: "bayer:bayer_scale=3", scaleWidth: null },
+};
+
 async function convertOneVideo(inputPath, outputDir, options = {}) {
   const {
     fps = 12,
     width = 640,
-    maxDuration = 10,
-    keepOriginal = true
+    maxDuration = 30,
+    keepOriginal = true,
+    quality = "high",
   } = options;
 
   if (!inputPath || !outputDir) {
@@ -36,12 +81,24 @@ async function convertOneVideo(inputPath, outputDir, options = {}) {
 
   const safeFps = Number.isFinite(Number(fps)) ? Number(fps) : 12;
   const safeWidth = Number.isFinite(Number(width)) ? Number(width) : 640;
-  const safeDuration = Number.isFinite(Number(maxDuration)) ? Number(maxDuration) : 10;
+  const safeDuration = Number.isFinite(Number(maxDuration))
+    ? Number(maxDuration)
+    : 10;
+
+  const { maxColors, dither, scaleWidth } =
+    QUALITY_PRESETS[quality] ?? QUALITY_PRESETS.high;
+
+  // scaleWidth "iw" = keep original video resolution; null = use user-provided width
+  const scaleTarget = scaleWidth ?? safeWidth;
+
+  // Detect and remove black borders (pillarbox / letterbox)
+  const crop = await detectCrop(inputPath);
+  const cropStep = crop ? `crop=${crop},` : "";
 
   const filterGraph = [
-    `[0:v]fps=${safeFps},scale=${safeWidth}:-1:flags=lanczos,split[a][b]`,
-    `[a]palettegen=stats_mode=full[p]`,
-    `[b][p]paletteuse=dither=sierra2_4a`
+    `[0:v]fps=${safeFps},${cropStep}scale=${scaleTarget}:-1:flags=lanczos,split[a][b]`,
+    `[a]palettegen=stats_mode=full:max_colors=${maxColors}[p]`,
+    `[b][p]paletteuse=dither=${dither}`,
   ];
 
   await new Promise((resolve, reject) => {
@@ -60,7 +117,7 @@ async function convertOneVideo(inputPath, outputDir, options = {}) {
   return {
     inputPath,
     outputPath,
-    removedOriginal: !keepOriginal
+    removedOriginal: !keepOriginal,
   };
 }
 
@@ -74,8 +131,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   });
 
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
@@ -100,7 +157,7 @@ app.on("window-all-closed", () => {
 ipcMain.handle("pick-output", async () => {
   const result = await dialog.showOpenDialog({
     title: "Selecione a pasta de destino",
-    properties: ["openDirectory", "createDirectory"]
+    properties: ["openDirectory", "createDirectory"],
   });
 
   if (result.canceled || result.filePaths.length === 0) {
@@ -111,8 +168,22 @@ ipcMain.handle("pick-output", async () => {
 });
 
 ipcMain.handle("convert-video", async (_event, payload) => {
-  const { inputPath, outputDir, fps, width, maxDuration, keepOriginal } = payload;
-  return convertOneVideo(inputPath, outputDir, { fps, width, maxDuration, keepOriginal });
+  const {
+    inputPath,
+    outputDir,
+    fps,
+    width,
+    maxDuration,
+    keepOriginal,
+    quality,
+  } = payload;
+  return convertOneVideo(inputPath, outputDir, {
+    fps,
+    width,
+    maxDuration,
+    keepOriginal,
+    quality,
+  });
 });
 
 ipcMain.handle("convert-videos", async (_event, payload) => {
@@ -122,7 +193,8 @@ ipcMain.handle("convert-videos", async (_event, payload) => {
     fps = 12,
     width = 640,
     maxDuration = 10,
-    keepOriginal = true
+    keepOriginal = true,
+    quality = "high",
   } = payload;
 
   if (!Array.isArray(inputPaths) || inputPaths.length === 0) {
@@ -135,13 +207,14 @@ ipcMain.handle("convert-videos", async (_event, payload) => {
       fps,
       width,
       maxDuration,
-      keepOriginal
+      keepOriginal,
+      quality,
     });
     results.push(result);
   }
 
   return {
     count: results.length,
-    results
+    results,
   };
 });
