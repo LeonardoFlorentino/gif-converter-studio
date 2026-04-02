@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -19,7 +19,19 @@
           <p class="eyebrow">Desktop Tool</p>
           <h1>GIF Converter Studio</h1>
         </div>
-        <p class="hint">Arraste um .mp4, ajuste e converta para usar no seu public.</p>
+        <div class="topbar-side">
+          <button
+            id="theme-toggle"
+            class="btn ghost theme-toggle"
+            type="button"
+            aria-pressed="false"
+          >
+            Modo escuro
+          </button>
+          <p class="hint">
+            Arraste um .mp4, ajuste e converta para usar no seu public.
+          </p>
+        </div>
       </header>
 
       <section id="drop-zone" class="drop-zone">
@@ -35,7 +47,12 @@
         </div>
         <div class="row row-inline">
           <label for="output-dir">Destino</label>
-          <input id="output-dir" type="text" placeholder="Escolha a pasta de saida" readonly />
+          <input
+            id="output-dir"
+            type="text"
+            placeholder="Escolha a pasta de saida"
+            readonly
+          />
           <button id="choose-output" class="btn ghost">Selecionar pasta</button>
         </div>
         <div class="row row-inline">
@@ -57,7 +74,15 @@
           </label>
           <label>
             Duracao maxima (s)
-            <input id="duration" type="number" min="1" max="60" value="10" />
+            <input id="duration" type="number" min="1" max="300" value="30" />
+          </label>
+          <label>
+            Qualidade
+            <select id="quality">
+              <option value="high">Alta</option>
+              <option value="medium">Media</option>
+              <option value="low">Baixa</option>
+            </select>
           </label>
         </div>
         <label class="check-row">
@@ -66,7 +91,9 @@
         </label>
 
         <div class="actions">
-          <button id="convert" class="btn primary">Converter lote para GIF</button>
+          <button id="convert" class="btn primary">
+            Converter lote para GIF
+          </button>
         </div>
 
         <p id="status" class="status idle">Aguardando arquivo...</p>
